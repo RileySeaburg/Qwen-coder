@@ -13,16 +13,13 @@ set(CMAKE_PREFIX_PATH "/usr/local/cuda-12.3")
 
 project(memory_manager CUDA CXX)
 
-# Set CUDA version
-set(CMAKE_CUDA_COMPILER_VERSION "12.3")
-
 # Enable C++11
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_STANDARD 11)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
-# Find CUDA using FindCUDA module
+# Find CUDA
 include(FindCUDA)
 if(NOT CUDA_FOUND)
     message(FATAL_ERROR "CUDA not found. Please specify CUDA_TOOLKIT_ROOT_DIR.")
@@ -30,13 +27,16 @@ endif()
 
 include_directories(${CUDA_INCLUDE_DIRS})
 
-# Set CUDA flags
+# Set CUDA flags for better memory management
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};
     -O3
     -gencode arch=compute_86,code=sm_86
     --use_fast_math
     --ptxas-options=-v
     -lineinfo
+    -Xcompiler -fPIC
+    --default-stream per-thread
+    --maxrregcount=128
 )
 
 # Add library

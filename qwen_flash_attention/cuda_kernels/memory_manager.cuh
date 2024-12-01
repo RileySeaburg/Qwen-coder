@@ -1,61 +1,24 @@
 #ifndef MEMORY_MANAGER_CUH
 #define MEMORY_MANAGER_CUH
 
-#include <cuda_runtime.h>
+#include <cstddef>
 
-// Memory block structure
-struct MemoryBlock {
-    void* ptr;
-    size_t size;
-    bool used;
-    bool is_shared;  // Whether this block uses shared system memory
-    MemoryBlock* next;
-};
+// Initialize the memory manager with a specified pool size
+bool initializeMemoryManager(size_t size);
 
-// Memory pool structure
-struct MemoryPool {
-    void* dedicated_base;  // Base pointer for dedicated GPU memory
-    void* shared_base;     // Base pointer for shared system memory
-    size_t dedicated_size; // Size of dedicated GPU memory pool
-    size_t shared_size;    // Size of shared system memory pool
-    MemoryBlock* blocks;
-    cudaStream_t stream;
-};
+// Allocate memory from the pool
+void* allocateMemory(size_t size);
 
-// CUDA kernel declarations (defined in .cu file)
-template<typename T>
-__global__ void processWithSharedMemory(T* input, T* output, size_t size);
+// Free previously allocated memory
+bool freeMemory(void* ptr);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+// Shutdown the memory manager and free all resources
+bool shutdownMemoryManager();
 
-// Initialize memory pool
-cudaError_t initMemoryPool(MemoryPool* pool, size_t size);
+// Get the amount of available memory in the pool
+size_t getAvailableMemory();
 
-// Allocate memory from pool
-cudaError_t allocateMemory(MemoryPool* pool, void** ptr, size_t size);
-
-// Free memory back to pool
-cudaError_t freeMemory(MemoryPool* pool, void* ptr);
-
-// Get memory info
-cudaError_t getMemoryInfo(MemoryPool* pool, size_t* free_size, size_t* largest_block);
-
-// Process data using shared memory
-cudaError_t processData(MemoryPool* pool, void* input_ptr, void* output_ptr, size_t size);
-
-// Memory copy with stream
-cudaError_t copyMemoryAsync(void* dst, const void* src, size_t size, MemoryPool* pool);
-
-// Synchronize memory operations
-cudaError_t synchronizeMemory(MemoryPool* pool);
-
-// Cleanup memory pool
-cudaError_t cleanupMemoryPool(MemoryPool* pool);
-
-#ifdef __cplusplus
-}
-#endif
+// Defragment the memory pool to reduce fragmentation
+bool defragmentMemory();
 
 #endif // MEMORY_MANAGER_CUH
