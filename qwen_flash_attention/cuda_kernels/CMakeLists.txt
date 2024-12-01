@@ -1,11 +1,19 @@
 cmake_minimum_required(VERSION 3.18)
+
+# Set CUDA host compiler before project declaration
+set(CMAKE_CUDA_HOST_COMPILER "/usr/bin/gcc")
+set(CMAKE_CUDA_ARCHITECTURES 86)
+
+# Set CUDA paths explicitly
+set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-12.3")
+set(CUDA_BIN_PATH "/usr/local/cuda-12.3/bin")
+set(CUDA_INCLUDE_DIRS "/usr/local/cuda-12.3/include")
+set(CUDA_TOOLKIT_INCLUDE "/usr/local/cuda-12.3/include")
+
 project(memory_manager CUDA CXX)
 
 # Set CUDA version
 set(CMAKE_CUDA_COMPILER_VERSION "12.3")
-
-# Set CUDA architecture based on A6000 (Ampere)
-set(CMAKE_CUDA_ARCHITECTURES 86)
 
 # Enable C++11
 set(CMAKE_CXX_STANDARD 11)
@@ -14,7 +22,7 @@ set(CMAKE_CUDA_STANDARD 11)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 # Find CUDA
-find_package(CUDA 12.3 REQUIRED)
+find_package(CUDA 12.3 REQUIRED PATHS ${CUDA_TOOLKIT_ROOT_DIR} NO_DEFAULT_PATH)
 include_directories(${CUDA_INCLUDE_DIRS})
 
 # Set CUDA flags
