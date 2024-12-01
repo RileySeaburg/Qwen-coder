@@ -1,0 +1,15 @@
+fastapi>=0.109.0
+uvicorn>=0.27.0
+anthropic>=0.18.0
+pydantic>=2.0.0
+grpcio>=1.63.2,<2.0.0
+protobuf>=5.0,<6.0
+opentelemetry-api==1.28.2
+opentelemetry-sdk==1.28.2
+opentelemetry-proto==1.28.2
+opentelemetry-semantic-conventions==0.49b2
+opentelemetry-exporter-otlp-proto-grpc==1.28.2
+opentelemetry-exporter-otlp-proto-common==1.28.2
+opentelemetry-instrumentation==0.49b2
+opentelemetry-instrumentation-asgi==0.49b2
+opentelemetry-instrumentation-fastapi==0.49b2

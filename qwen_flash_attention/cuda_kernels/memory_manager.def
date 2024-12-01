@@ -1,0 +1,10 @@
+LIBRARY memory_manager
+EXPORTS
+    initMemoryPool
+    allocateMemory
+    freeMemory
+    getMemoryInfo
+    processData
+    copyMemoryAsync
+    synchronizeMemory
+    cleanupMemoryPool

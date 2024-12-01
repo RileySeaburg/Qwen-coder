@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Qwen + AutoGen Server Status</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .status {
+            padding: 20px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .server {
+            background-color: #f5f5f5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .endpoint {
+            background-color: #e9ecef;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Qwen + AutoGen Server Status</h1>
+    
+    <div class="server">
+        <h2>Qwen Server</h2>
+        <p>OpenAI-compatible API server running Qwen2.5-Coder-3B-Instruct model</p>
+        <div class="status">
+            <strong>Status:</strong> Running
+            <br>
+            <strong>Port:</strong> 8000
+        </div>
+        <h3>Endpoints:</h3>
+        <div class="endpoint">POST /v1/completions</div>
+        <div class="endpoint">POST /v1/chat/completions</div>
+    </div>
+
+    <div class="server">
+        <h2>AutoGen Server</h2>
+        <p>Agent-based operations server integrating Qwen and Claude</p>
+        <div class="status">
+            <strong>Status:</strong> Running
+            <br>
+            <strong>Port:</strong> 8001
+        </div>
+        <h3>Endpoints:</h3>
+        <div class="endpoint">POST /v1/agent/chat</div>
+    </div>
+
+    <div class="server">
+        <h2>Features</h2>
+        <ul>
+            <li>Code Generation with Qwen</li>
+            <li>File Editing with Claude</li>
+            <li>Agent-based Operations with AutoGen</li>
+            <li>GPU Acceleration with CUDA</li>
+            <li>OpenAI-compatible API Interface</li>
+        </ul>
+    </div>
+
+    <script>
+        // Check server status every 30 seconds
+        setInterval(() => {
+            fetch('/v1/completions', { method: 'HEAD' })
+                .then(response => {
+                    document.querySelectorAll('.status')[0].style.backgroundColor = '#d4edda';
+                })
+                .catch(() => {
+                    document.querySelectorAll('.status')[0].style.backgroundColor = '#f8d7da';
+                });
+
+            fetch('http://localhost:8001/v1/agent/chat', { method: 'HEAD' })
+                .then(response => {
+                    document.querySelectorAll('.status')[1].style.backgroundColor = '#d4edda';
+                })
+                .catch(() => {
+                    document.querySelectorAll('.status')[1].style.backgroundColor = '#f8d7da';
+                });
+        }, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - build-essential
+  - python3-pip
+  - python3-dev
+  - git
+  - curl
+  - wget
+  - software-properties-common
+  - apt-transport-https
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  - tmux
+  - htop
+  - nvidia-smi
+
+runcmd:
+  # Install NVIDIA drivers for A6000
+  - add-apt-repository -y ppa:graphics-drivers/ppa
+  - apt update
+  - DEBIAN_FRONTEND=noninteractive apt install -y nvidia-driver-535
+  - systemctl enable nvidia-persistenced
+  
+  # Configure GPU settings for A6000
+  - nvidia-smi -pm 1  # Enable persistence mode
+  - nvidia-smi --auto-boost-default=0  # Disable auto boost
+  - nvidia-smi -ac 1215,1950  # Set memory and graphics clocks
+  
+  # Install CUDA toolkit
+  - wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+  - dpkg -i cuda-keyring_1.1-1_all.deb
+  - apt update
+  - DEBIAN_FRONTEND=noninteractive apt install -y cuda-toolkit-12-3
+  - DEBIAN_FRONTEND=noninteractive apt install -y cuda-drivers-535
+  - DEBIAN_FRONTEND=noninteractive apt install -y cuda-command-line-tools-12-3
+
+  # Install cuDNN
+  - DEBIAN_FRONTEND=noninteractive apt install -y libcudnn8 libcudnn8-dev
+
+  # Install MongoDB
+  - curl -fsSL https://pgp.mongodb.com/server-7.0.asc | gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+  - echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+  - apt update
+  - DEBIAN_FRONTEND=noninteractive apt install -y mongodb-org
+  - systemctl enable mongod
+  - systemctl start mongod
+
+  # Install Node.js
+  - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+  - apt install -y nodejs
+  - npm install -g yarn
+
+  # Install Python dependencies with specific CUDA support
+  - pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+  - pip3 install transformers accelerate bitsandbytes sentencepiece protobuf pymongo fastapi uvicorn python-multipart httpx websockets sentence-transformers flash-attn --no-cache-dir
+
+  # Clone and setup project
+  - git clone https://github.com/your-username/Qwen-coder.git /opt/qwen-coder
+  - chown -R ubuntu:ubuntu /opt/qwen-coder
+  - cd /opt/qwen-coder
+  - pip3 install -e .
+
+  # Set environment variables for A6000 optimization
+  - echo 'export PATH=/usr/local/cuda-12.3/bin:$PATH' >> /etc/environment
+  - echo 'export LD_LIBRARY_PATH=/usr/local/cuda-12.3/lib64:$LD_LIBRARY_PATH' >> /etc/environment
+  - echo 'export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb=256' >> /etc/environment
+  - echo 'export CUDA_LAUNCH_BLOCKING=0' >> /etc/environment
+  - echo 'export CUDA_VISIBLE_DEVICES=0' >> /etc/environment
+  - echo 'export NCCL_P2P_DISABLE=0' >> /etc/environment
+  - echo 'export NCCL_IB_DISABLE=0' >> /etc/environment
+
+write_files:
+  - path: /etc/systemd/system/qwen-api.service
+    content: |
+      [Unit]
+      Description=Qwen API Server
+      After=network.target mongod.service
+
+      [Service]
+      User=ubuntu
+      WorkingDirectory=/opt/qwen-coder
+      Environment=PATH=/usr/local/cuda-12.3/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      Environment=LD_LIBRARY_PATH=/usr/local/cuda-12.3/lib64
+      Environment=PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb=256
+      Environment=CUDA_LAUNCH_BLOCKING=0
+      Environment=CUDA_VISIBLE_DEVICES=0
+      Environment=NCCL_P2P_DISABLE=0
+      Environment=NCCL_IB_DISABLE=0
+      ExecStart=/usr/local/bin/uvicorn qwen_flash_attention.api_server:app --host 0.0.0.0 --port 8000 --workers 1
+      Restart=always
+      # Increase memory limit for A6000
+      MemoryMax=48G
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /etc/nvidia/nvidia-persistenced-opt-in
+    content: ""
+
+  # Add GPU monitoring script
+  - path: /usr/local/bin/gpu-stats
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      while true; do
+        nvidia-smi --query-gpu=timestamp,name,temperature.gpu,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used --format=csv
+        sleep 5
+      done
+
+power_state:
+  mode: reboot
+  timeout: 300
+  condition: True

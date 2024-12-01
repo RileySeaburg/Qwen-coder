@@ -1,0 +1,99 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Debug Tests",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/qwen_flash_attention/mcp/tests/run_tests.py",
+            "args": [],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "MCP_MODEL_SERVER": "http://localhost:8001",
+                "MCP_CONTEXT_SERVER": "http://localhost:8000",
+                "MONGODB_URL": "mongodb://localhost:27017",
+                "TEST_DATABASE": "test_vectors",
+                "TEST_COLLECTION": "test_knowledge"
+            }
+        },
+        {
+            "name": "Python: Debug Tests with Coverage",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/qwen_flash_attention/mcp/tests/run_tests.py",
+            "args": ["--coverage"],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "MCP_MODEL_SERVER": "http://localhost:8001",
+                "MCP_CONTEXT_SERVER": "http://localhost:8000",
+                "MONGODB_URL": "mongodb://localhost:27017",
+                "TEST_DATABASE": "test_vectors",
+                "TEST_COLLECTION": "test_knowledge"
+            }
+        },
+        {
+            "name": "Python: Debug Functional Tests",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "qwen_flash_attention/mcp/tests/test_functional.py",
+                "-v"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "MCP_MODEL_SERVER": "http://localhost:8001",
+                "MCP_CONTEXT_SERVER": "http://localhost:8000",
+                "MONGODB_URL": "mongodb://localhost:27017",
+                "TEST_DATABASE": "test_vectors",
+                "TEST_COLLECTION": "test_knowledge"
+            }
+        },
+        {
+            "name": "Python: Debug Integration Tests",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "qwen_flash_attention/mcp/tests/test_integration.py",
+                "-v"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "MCP_MODEL_SERVER": "http://localhost:8001",
+                "MCP_CONTEXT_SERVER": "http://localhost:8000",
+                "MONGODB_URL": "mongodb://localhost:27017",
+                "TEST_DATABASE": "test_vectors",
+                "TEST_COLLECTION": "test_knowledge"
+            }
+        },
+        {
+            "name": "Python: Debug System Tests",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "qwen_flash_attention/mcp/tests/test_system.py",
+                "-v"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "MCP_MODEL_SERVER": "http://localhost:8001",
+                "MCP_CONTEXT_SERVER": "http://localhost:8000",
+                "MONGODB_URL": "mongodb://localhost:27017",
+                "TEST_DATABASE": "test_vectors",
+                "TEST_COLLECTION": "test_knowledge"
+            }
+        }
+    ]
+}
