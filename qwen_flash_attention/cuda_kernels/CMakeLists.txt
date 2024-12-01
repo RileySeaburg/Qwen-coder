@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.18)
 project(memory_manager CUDA CXX)
 
 # Set CUDA version
-set(CMAKE_CUDA_COMPILER_VERSION "12.2")
+set(CMAKE_CUDA_COMPILER_VERSION "12.3")
 
-# Set CUDA architecture based on RTX 2080 SUPER (Turing)
-set(CMAKE_CUDA_ARCHITECTURES 75)
+# Set CUDA architecture based on A6000 (Ampere)
+set(CMAKE_CUDA_ARCHITECTURES 86)
 
 # Enable C++11
 set(CMAKE_CXX_STANDARD 11)
@@ -14,13 +14,13 @@ set(CMAKE_CUDA_STANDARD 11)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 # Find CUDA
-find_package(CUDA 12.2 REQUIRED)
+find_package(CUDA 12.3 REQUIRED)
 include_directories(${CUDA_INCLUDE_DIRS})
 
 # Set CUDA flags
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};
     -O3
-    -gencode arch=compute_75,code=sm_75
+    -gencode arch=compute_86,code=sm_86
     --use_fast_math
     --ptxas-options=-v
     -lineinfo
