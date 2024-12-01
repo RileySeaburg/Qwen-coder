@@ -1,25 +1,31 @@
 import logging
 import gc
 import torch
-from fastapi import FastAPI, WebSocket
-from .websocket_manager import WebSocketManager
+from fastapi import FastAPI, WebSocket, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from .model import QwenModel
 from .tool_model import ToolModel
-from shared_embeddings.vector_store import VectorStore
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
-app = FastAPI()
+app = FastAPI(
+    title="Qwen API",
+    description="API for Qwen language model",
+    version="1.0.0",
+)
 
-# Initialize WebSocket manager
-ws_manager = WebSocketManager()
-logger.info("WebSocket manager initialized")
-
-# Initialize vector store
-vector_store = VectorStore()
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize models
 tool_model = None
@@ -40,19 +46,7 @@ async def startup():
         # Clear GPU memory before starting
         clear_gpu_memory()
         
-        # Initialize ToolACE model first (smaller model with quantization)
-        logger.info("Initializing ToolACE model...")
-        try:
-            tool_model = ToolModel()
-            logger.info("ToolACE model initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize ToolACE model: {str(e)}")
-            tool_model = None
-        
-        # Clear GPU memory again
-        clear_gpu_memory()
-        
-        # Then initialize Qwen model
+        # Initialize Qwen model
         logger.info("Initializing Qwen model...")
         try:
             qwen_model = QwenModel()
@@ -67,19 +61,42 @@ async def startup():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await ws_manager.connect(websocket)
+    await websocket.accept()
     try:
         while True:
             data = await websocket.receive_text()
-            # Process message and get response
-            response = await process_message(data)
-            # Send response back
-            await websocket.send_text(response)
+            if qwen_model is None:
+                await websocket.send_text("Error: Model not initialized")
+                continue
+            try:
+                response = qwen_model.generate(data)
+                await websocket.send_text(response)
+            except Exception as e:
+                logger.error(f"Error generating response: {str(e)}")
+                await websocket.send_text(f"Error: {str(e)}")
     except Exception as e:
         logger.error(f"WebSocket error: {str(e)}")
     finally:
-        await ws_manager.disconnect(websocket)
+        await websocket.close()
 
-async def process_message(message: str) -> str:
-    # Add your message processing logic here
-    return f"Received: {message}"
+@app.post("/v1/chat/completions")
+async def chat_completions(request: Request):
+    """Chat completion endpoint"""
+    if qwen_model is None:
+        return JSONResponse({
+            "error": "Model not initialized"
+        }, status_code=503)
+    try:
+        # Get request body as JSON
+        body = await request.json()
+        # Get the last message from the conversation
+        last_message = body["messages"][-1]["content"]
+        response = qwen_model.generate(last_message)
+        return JSONResponse({
+            "response": response
+        })
+    except Exception as e:
+        logger.error(f"Error in chat endpoint: {str(e)}")
+        return JSONResponse({
+            "error": str(e)
+        }, status_code=500)

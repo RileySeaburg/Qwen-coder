@@ -1,7 +1,8 @@
-import logging
-import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+from accelerate import init_empty_weights
 from transformers import BitsAndBytesConfig
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -18,28 +19,25 @@ class QwenModel:
 
             # Configure device map and memory
             max_memory = {
-                0: "25GB",  # GPU
-                "cpu": "48GB"  # CPU RAM
+                0: "12GB",  # GPU - reduced from previous value
+                "cpu": "24GB"  # CPU RAM - reduced from previous value
             }
 
             logger.info("Loading Qwen tokenizer...")
             self.tokenizer = AutoTokenizer.from_pretrained(
-                "Qwen/Qwen2.5-32B",
-                trust_remote_code=True,
-                cache_dir="/mnt/models/huggingface"
+                "Qwen/Qwen2.5-7B",  # Using smaller model
+                trust_remote_code=True
             )
 
             logger.info("Loading Qwen model...")
             # Load model with optimizations
             self.model = AutoModelForCausalLM.from_pretrained(
-                "Qwen/Qwen2.5-32B",
+                "Qwen/Qwen2.5-7B",  # Using smaller model
                 device_map="auto",
                 torch_dtype=torch.float16,
                 quantization_config=quantization_config,
                 max_memory=max_memory,
-                offload_folder="/mnt/models/offload",
                 trust_remote_code=True,
-                cache_dir="/mnt/models/huggingface",
                 low_cpu_mem_usage=True,
                 attn_implementation="flash_attention_2"
             )
