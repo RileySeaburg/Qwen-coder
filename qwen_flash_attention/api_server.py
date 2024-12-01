@@ -1,4 +1,6 @@
 import logging
+import gc
+import torch
 from fastapi import FastAPI, WebSocket
 from .websocket_manager import WebSocketManager
 from .model import QwenModel
@@ -23,19 +25,42 @@ vector_store = VectorStore()
 tool_model = None
 qwen_model = None
 
+def clear_gpu_memory():
+    """Clear CUDA memory"""
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
+        gc.collect()
+
 @app.on_event("startup")
 async def startup():
     global tool_model, qwen_model
     
     try:
+        # Clear GPU memory before starting
+        clear_gpu_memory()
+        
         # Initialize ToolACE model first (smaller model with quantization)
         logger.info("Initializing ToolACE model...")
-        tool_model = ToolModel()
+        try:
+            tool_model = ToolModel()
+            logger.info("ToolACE model initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize ToolACE model: {str(e)}")
+            tool_model = None
+        
+        # Clear GPU memory again
+        clear_gpu_memory()
         
         # Then initialize Qwen model
         logger.info("Initializing Qwen model...")
-        qwen_model = QwenModel()
-        
+        try:
+            qwen_model = QwenModel()
+            logger.info("Qwen model initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize Qwen model: {str(e)}")
+            qwen_model = None
+            
     except Exception as e:
         logger.error(f"Error in startup: {str(e)}")
         raise
