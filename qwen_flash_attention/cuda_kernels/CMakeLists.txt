@@ -9,6 +9,7 @@ set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-12.3")
 set(CUDA_BIN_PATH "/usr/local/cuda-12.3/bin")
 set(CUDA_INCLUDE_DIRS "/usr/local/cuda-12.3/include")
 set(CUDA_TOOLKIT_INCLUDE "/usr/local/cuda-12.3/include")
+set(CMAKE_PREFIX_PATH "/usr/local/cuda-12.3")
 
 project(memory_manager CUDA CXX)
 
@@ -21,8 +22,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_STANDARD 11)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
-# Find CUDA
-find_package(CUDA 12.3 REQUIRED PATHS ${CUDA_TOOLKIT_ROOT_DIR} NO_DEFAULT_PATH)
+# Find CUDA using FindCUDA module
+include(FindCUDA)
+if(NOT CUDA_FOUND)
+    message(FATAL_ERROR "CUDA not found. Please specify CUDA_TOOLKIT_ROOT_DIR.")
+endif()
+
 include_directories(${CUDA_INCLUDE_DIRS})
 
 # Set CUDA flags
