@@ -1,6 +1,6 @@
 #!/bin/bash
-mkdir -p build
+/bin/mkdir -p build
 cd build
-cmake ..
-make -j$(nproc)
-sudo make install
+/usr/bin/cmake ..
+/usr/bin/make -j$(/usr/bin/nproc)
+/usr/bin/sudo /usr/bin/make install
