@@ -46,14 +46,14 @@ async def startup():
         # Clear GPU memory before starting
         clear_gpu_memory()
         
-        # Initialize Qwen model
-        logger.info("Initializing Qwen model...")
+        # Initialize ToolACE model first (smaller model)
+        logger.info("Initializing ToolACE model...")
         try:
-            qwen_model = QwenModel()
-            logger.info("Qwen model initialized successfully")
+            tool_model = ToolModel()
+            logger.info("ToolACE model initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize Qwen model: {str(e)}")
-            qwen_model = None
+            logger.error(f"Failed to initialize ToolACE model: {str(e)}")
+            tool_model = None
             
     except Exception as e:
         logger.error(f"Error in startup: {str(e)}")
@@ -65,11 +65,11 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            if qwen_model is None:
+            if tool_model is None:
                 await websocket.send_text("Error: Model not initialized")
                 continue
             try:
-                response = qwen_model.generate(data)
+                response = tool_model.generate(data)
                 await websocket.send_text(response)
             except Exception as e:
                 logger.error(f"Error generating response: {str(e)}")
@@ -82,7 +82,7 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request):
     """Chat completion endpoint"""
-    if qwen_model is None:
+    if tool_model is None:
         return JSONResponse({
             "error": "Model not initialized"
         }, status_code=503)
@@ -91,7 +91,7 @@ async def chat_completions(request: Request):
         body = await request.json()
         # Get the last message from the conversation
         last_message = body["messages"][-1]["content"]
-        response = qwen_model.generate(last_message)
+        response = tool_model.generate(last_message)
         return JSONResponse({
             "response": response
         })
