@@ -3,7 +3,7 @@ import json
 import asyncio
 import torch
 from typing import Optional, Dict, List, Any, Union
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaTokenizer
 from transformers import BitsAndBytesConfig
 from .browser_session import BrowserSession
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -48,9 +48,9 @@ class ToolModel:
                 "cpu": max_cpu_memory
             }
 
-            logger.info("Loading ToolACE tokenizer...")
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                model_path,
+            logger.info("Loading LLaMA tokenizer...")
+            self.tokenizer = LlamaTokenizer.from_pretrained(
+                "meta-llama/Llama-2-7b-chat-hf",
                 trust_remote_code=True,
                 cache_dir=cache_dir
             )
