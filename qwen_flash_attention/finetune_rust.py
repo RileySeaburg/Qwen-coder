@@ -26,44 +26,39 @@ logger = logging.getLogger(__name__)
 TokenizerType = Union[PreTrainedTokenizer, PreTrainedTokenizerFast]
 
 def setup_model_and_tokenizer(
-    model_name: str = "meta-llama/Llama-3.2-11B-Vision-Instruct",
+    model_name: str = "Qwen/Qwen-7B",
     cache_dir: str = "/mnt/models/huggingface"
 ) -> Tuple[AutoModelForCausalLM, TokenizerType]:
     """Setup the base model and tokenizer with optimized memory settings"""
     
-    # Configure 4-bit quantization with double quantization
+    # Configure 4-bit quantization
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
         bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_storage=torch.uint8
+        bnb_4bit_use_double_quant=True
     )
 
-    # Load tokenizer with optimized settings
+    # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(
         model_name,
         cache_dir=cache_dir,
-        padding_side="left",
         trust_remote_code=True,
-        model_max_length=1024  # Reduced for memory efficiency
+        padding_side="left"
     )
     
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    # Load model with memory optimizations
+    # Load model
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         cache_dir=cache_dir,
         quantization_config=bnb_config,
         device_map="auto",
         trust_remote_code=True,
-        torch_dtype=torch.float16,
-        low_cpu_mem_usage=True,
-        max_memory={0: "45GB", "cpu": "48GB"},  # Reserve some GPU memory
-        offload_folder="/mnt/models/offload"
+        torch_dtype=torch.float16
     )
     
     # Enable gradient checkpointing
@@ -98,10 +93,10 @@ def setup_lora(model: AutoModelForCausalLM) -> AutoModelForCausalLM:
 
 def prepare_rust_dataset(
     tokenizer: TokenizerType,
-    max_length: int = 1024,  # Reduced for memory efficiency
-    batch_size: int = 1  # Small batch size
+    max_length: int = 2048,
+    batch_size: int = 1
 ):
-    """Load and prepare the Rust dataset with memory optimizations"""
+    """Load and prepare the Rust dataset"""
     
     # Load dataset with streaming
     dataset = load_dataset(
@@ -111,34 +106,34 @@ def prepare_rust_dataset(
     )
     
     def format_rust_code(example):
-        """Format Rust code with instruction prompt"""
+        """Format Rust code with Qwen chat template"""
         instruction = (
-            "You are an expert Rust programmer. Below is a Rust code snippet. "
-            "Study it carefully to learn Rust programming patterns and best practices.\n\n"
-            "Code:\n```rust\n{}\n```"
-        ).format(example["content"][:max_length])  # Truncate long examples
+            "<|im_start|>system\nYou are an expert Rust programmer. Study the following code carefully to learn Rust programming patterns and best practices.<|im_end|>\n"
+            "<|im_start|>user\nHere is a Rust code snippet:\n```rust\n{}\n```<|im_end|>\n"
+            "<|im_start|>assistant\nI will analyze this code and learn from its patterns and practices.<|im_end|>\n"
+        ).format(example["content"][:max_length])
         
         return {"text": instruction}
     
-    # Format dataset with efficient mapping
+    # Format dataset
     dataset = dataset.map(
         format_rust_code,
         remove_columns=dataset.column_names,
-        num_proc=4  # Parallel processing
+        num_proc=4
     )
     
     def tokenize_function(examples):
-        """Memory-efficient tokenization"""
+        """Tokenize the text"""
         outputs = tokenizer(
             examples["text"],
-            padding="max_length",
+            padding=True,
             truncation=True,
             max_length=max_length,
             return_tensors="pt"
         )
         return outputs
     
-    # Tokenize dataset with efficient batching
+    # Tokenize dataset
     tokenized_dataset = dataset.map(
         tokenize_function,
         batched=True,
@@ -150,21 +145,21 @@ def prepare_rust_dataset(
     return tokenized_dataset
 
 def train(
-    model_name: str = "meta-llama/Llama-3.2-11B-Vision-Instruct",
+    model_name: str = "Qwen/Qwen-7B",
     cache_dir: str = "/mnt/models/huggingface",
-    output_dir: str = "/mnt/models/rust-llama",
+    output_dir: str = "/mnt/models/rust-qwen",
     num_train_epochs: int = 3,
-    per_device_train_batch_size: int = 1,  # Small batch size
-    gradient_accumulation_steps: int = 32,  # Increased for stability
-    learning_rate: float = 1e-4,  # Reduced for stability
+    per_device_train_batch_size: int = 1,
+    gradient_accumulation_steps: int = 32,
+    learning_rate: float = 1e-4,
     max_grad_norm: float = 0.3,
     warmup_ratio: float = 0.03,
     lr_scheduler_type: str = "cosine",
     save_steps: int = 100,
     logging_steps: int = 10,
-    max_steps: int = 10000  # Limit training time
+    max_steps: int = 10000
 ):
-    """Main training function with memory optimizations"""
+    """Main training function"""
     
     logger.info("Setting up model and tokenizer...")
     model, tokenizer = setup_model_and_tokenizer(model_name, cache_dir)
@@ -175,7 +170,7 @@ def train(
     logger.info("Preparing dataset...")
     dataset = prepare_rust_dataset(tokenizer=tokenizer)
     
-    # Setup training arguments with memory optimizations
+    # Setup training arguments
     training_args = TrainingArguments(
         output_dir=output_dir,
         num_train_epochs=num_train_epochs,
@@ -187,30 +182,28 @@ def train(
         lr_scheduler_type=lr_scheduler_type,
         save_steps=save_steps,
         logging_steps=logging_steps,
-        save_total_limit=2,  # Keep fewer checkpoints
+        save_total_limit=2,
         push_to_hub=False,
         report_to="tensorboard",
         remove_unused_columns=False,
         fp16=True,
         gradient_checkpointing=True,
         max_steps=max_steps,
-        optim="adamw_torch_fused",  # Use fused optimizer
+        optim="adamw_torch_fused",
         dataloader_num_workers=4,
-        group_by_length=True,  # Group similar lengths for efficiency
+        group_by_length=True,
         ignore_data_skip=True,
-        ddp_find_unused_parameters=False,
-        torch_compile=True,  # Enable torch.compile
-        use_cpu=False
+        ddp_find_unused_parameters=False
     )
     
-    # Setup data collator with memory efficiency
+    # Setup data collator
     data_collator = DataCollatorForLanguageModeling(
         tokenizer=tokenizer,
         mlm=False,
-        pad_to_multiple_of=8  # Optimize for hardware
+        pad_to_multiple_of=8
     )
     
-    # Initialize trainer with memory optimizations
+    # Initialize trainer
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -218,9 +211,6 @@ def train(
         data_collator=data_collator,
         tokenizer=tokenizer
     )
-    
-    # Enable mixed precision training
-    trainer.accelerator.state.use_fp16 = True
     
     logger.info("Starting training...")
     trainer.train()
@@ -231,11 +221,6 @@ def train(
     return model, tokenizer
 
 if __name__ == "__main__":
-    # Set environment variables for optimized training
-    os.environ["CUDA_LAUNCH_BLOCKING"] = "0"
-    os.environ["TORCH_DISTRIBUTED_DEBUG"] = "DETAIL"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    
     try:
         model, tokenizer = train()
         logger.info("Training completed successfully!")
