@@ -39,7 +39,7 @@ def main():
     # Run LLaMA Factory CLI
     subprocess.run([
         "python3", 
-        "LLaMA-Factory/src/cli.py",
+        "-m", "llmtuner.cli",
         "sft",
         "--model_name_or_path", "Qwen/Qwen-7B",
         "--dataset", dataset_path,
