@@ -1,0 +1,7 @@
+{
+    "rust_dataset": {
+        "file_name": "rust_dataset.json",
+        "format": "sharegpt",
+        "source": "local"
+    }
+}
