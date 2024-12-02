@@ -38,7 +38,8 @@ def main():
     
     # Run LLaMA Factory CLI
     subprocess.run([
-        "llamafactory-cli",
+        "python3",
+        "LLaMA-Factory/src/entry_point.py",
         "train",
         "--model_name_or_path", "Qwen/Qwen-7B",
         "--dataset", dataset_path,
