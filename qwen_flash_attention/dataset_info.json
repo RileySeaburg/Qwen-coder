@@ -9,10 +9,6 @@
         "assistant_tag": "output",
         "system_tag": "system",
         "source": "local",
-        "fields_map": {
-            "input": "content",
-            "output": "content",
-            "system": "content"
-        }
+        "formatting_func": "convert_sharegpt"
     }
 }
