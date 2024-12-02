@@ -51,14 +51,15 @@ def setup_model_and_tokenizer(
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    # Load model
+    # Load model with flash attention
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         cache_dir=cache_dir,
         quantization_config=bnb_config,
         device_map="auto",
         trust_remote_code=True,
-        torch_dtype=torch.float16
+        torch_dtype=torch.float16,
+        attn_implementation="flash_attention"  # Enable flash attention
     )
     
     # Enable gradient checkpointing
@@ -92,50 +93,51 @@ def setup_lora(model: AutoModelForCausalLM) -> AutoModelForCausalLM:
 def prepare_rust_dataset(
     tokenizer: TokenizerType,
     max_length: int = 2048,
-    batch_size: int = 1
+    max_samples: int = 10000  # Limit dataset size for memory efficiency
 ):
     """Load and prepare the Rust dataset"""
     
-    # Load dataset with streaming
+    # Load dataset without streaming for better memory efficiency
     dataset = load_dataset(
         "ammarnasr/the-stack-rust-clean",
-        split="train",
-        streaming=True
+        split=f"train[:{max_samples}]"  # Take first max_samples examples
     )
     
-    def format_rust_code(example):
+    def format_rust_code(examples):
         """Format Rust code with Qwen chat template"""
-        instruction = (
+        instructions = [
             "<|im_start|>system\nYou are an expert Rust programmer. Study the following code carefully to learn Rust programming patterns and best practices.<|im_end|>\n"
             "<|im_start|>user\nHere is a Rust code snippet:\n```rust\n{}\n```<|im_end|>\n"
             "<|im_start|>assistant\nI will analyze this code and learn from its patterns and practices.<|im_end|>\n"
-        ).format(example["content"][:max_length])
+            .format(content[:max_length])  # Truncate long examples
+            for content in examples["content"]
+        ]
         
-        return {"text": instruction}
+        return {"text": instructions}
     
-    # Format dataset
+    # Format and tokenize dataset
     dataset = dataset.map(
         format_rust_code,
-        remove_columns=dataset.column_names
+        batched=True,
+        remove_columns=dataset.column_names,
+        desc="Formatting code"
     )
     
     def tokenize_function(examples):
         """Tokenize the text"""
-        outputs = tokenizer(
+        return tokenizer(
             examples["text"],
             padding=True,
             truncation=True,
             max_length=max_length,
             return_tensors="pt"
         )
-        return outputs
     
-    # Tokenize dataset
     tokenized_dataset = dataset.map(
         tokenize_function,
         batched=True,
-        batch_size=batch_size,
-        remove_columns=["text"]
+        remove_columns=["text"],
+        desc="Tokenizing"
     )
     
     return tokenized_dataset
@@ -187,7 +189,7 @@ def train(
         max_steps=max_steps,
         optim="adamw_torch_fused",
         dataloader_num_workers=4,
-        group_by_length=True,
+        group_by_length=True,  # Now works since we're not using streaming
         ignore_data_skip=True,
         ddp_find_unused_parameters=False
     )
