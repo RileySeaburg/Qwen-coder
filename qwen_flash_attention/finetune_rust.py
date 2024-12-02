@@ -51,15 +51,14 @@ def setup_model_and_tokenizer(
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    # Load model with flash attention
+    # Load model - Qwen handles flash attention internally
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         cache_dir=cache_dir,
         quantization_config=bnb_config,
         device_map="auto",
         trust_remote_code=True,
-        torch_dtype=torch.float16,
-        attn_implementation="flash_attention"  # Enable flash attention
+        torch_dtype=torch.float16
     )
     
     # Enable gradient checkpointing
