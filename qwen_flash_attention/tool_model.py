@@ -3,7 +3,7 @@ import json
 import asyncio
 import torch
 from typing import Optional, Dict, List, Any, Union
-from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import BitsAndBytesConfig
 from .browser_session import BrowserSession
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -15,7 +15,7 @@ class ValidationError(Exception):
     pass
 
 class ToolModel:
-    def __init__(self, model_path: str = "Team-ACE/ToolACE-8B", 
+    def __init__(self, model_path: str = "meta-llama/Meta-Llama-3-8B", 
                  cache_dir: str = "/mnt/models/huggingface",
                  max_gpu_memory: str = "20GB",
                  max_cpu_memory: str = "48GB",
@@ -49,13 +49,13 @@ class ToolModel:
             }
 
             logger.info("Loading LLaMA tokenizer...")
-            self.tokenizer = LlamaTokenizer.from_pretrained(
-                "meta-llama/Llama-2-7b-chat-hf",
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                model_path,
                 trust_remote_code=True,
                 cache_dir=cache_dir
             )
 
-            logger.info("Loading ToolACE model...")
+            logger.info("Loading LLaMA model...")
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_path,
                 device_map="auto",
@@ -69,10 +69,10 @@ class ToolModel:
             )
 
             self.model.eval()
-            logger.info("ToolACE model loaded successfully")
+            logger.info("LLaMA model loaded successfully")
 
         except Exception as e:
-            logger.error(f"Error initializing ToolACE model: {str(e)}")
+            logger.error(f"Error initializing LLaMA model: {str(e)}")
             raise
 
     def _validate_init_params(self, model_path: str, cache_dir: str, 
