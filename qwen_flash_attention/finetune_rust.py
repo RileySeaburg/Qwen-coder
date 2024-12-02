@@ -116,8 +116,7 @@ def prepare_rust_dataset(
     # Format dataset
     dataset = dataset.map(
         format_rust_code,
-        remove_columns=dataset.column_names,
-        num_proc=4
+        remove_columns=dataset.column_names
     )
     
     def tokenize_function(examples):
@@ -136,8 +135,7 @@ def prepare_rust_dataset(
         tokenize_function,
         batched=True,
         batch_size=batch_size,
-        remove_columns=["text"],
-        num_proc=4
+        remove_columns=["text"]
     )
     
     return tokenized_dataset
