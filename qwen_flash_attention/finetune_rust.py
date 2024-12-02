@@ -51,14 +51,15 @@ def setup_model_and_tokenizer(
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    # Load model - Qwen handles flash attention internally
+    # Load model - Qwen has built-in flash attention
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         cache_dir=cache_dir,
         quantization_config=bnb_config,
         device_map="auto",
         trust_remote_code=True,
-        torch_dtype=torch.float16
+        torch_dtype=torch.float16,
+        bf16=True  # Enable bf16 for better training stability
     )
     
     # Enable gradient checkpointing
@@ -70,19 +71,21 @@ def setup_model_and_tokenizer(
 def setup_lora(model: AutoModelForCausalLM) -> AutoModelForCausalLM:
     """Configure LoRA with memory-efficient settings"""
     
-    # Updated target modules for Qwen architecture
+    # Target modules for Qwen architecture
+    target_modules = [
+        "c_attn",
+        "c_proj", 
+        "w1",
+        "w2"
+    ]
+    
     lora_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
         r=8,  # Reduced rank for memory efficiency
         lora_alpha=16,
         lora_dropout=0.05,
         bias="none",
-        target_modules=[
-            "c_attn",
-            "c_proj",
-            "w1",
-            "w2"
-        ],
+        target_modules=target_modules,
         modules_to_save=["wte", "ln_f"]  # Save important layers
     )
     
@@ -183,7 +186,8 @@ def train(
         push_to_hub=False,
         report_to="tensorboard",
         remove_unused_columns=False,
-        fp16=True,
+        fp16=False,  # Disable fp16 since we're using bf16
+        bf16=True,  # Use bf16 for better training stability
         gradient_checkpointing=True,
         max_steps=max_steps,
         optim="adamw_torch_fused",
