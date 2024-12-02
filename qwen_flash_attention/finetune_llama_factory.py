@@ -17,11 +17,18 @@ def prepare_dataset():
         formatted_data = []
         for idx, item in enumerate(dataset):
             formatted_data.append({
-                "conversation": [
+                "conversations": [
                     {
-                        "system": "You are an expert Rust programmer. Study the following code carefully to learn Rust programming patterns and best practices.",
-                        "input": f"Here is a Rust code snippet:\n```rust\n{item['content']}\n```",
-                        "output": "I will analyze this code and learn from its patterns and practices."
+                        "from": "system",
+                        "value": "You are an expert Rust programmer. Study the following code carefully to learn Rust programming patterns and best practices."
+                    },
+                    {
+                        "from": "human",
+                        "value": f"Here is a Rust code snippet:\n```rust\n{item['content']}\n```"
+                    },
+                    {
+                        "from": "assistant",
+                        "value": "I will analyze this code and learn from its patterns and practices."
                     }
                 ]
             })
@@ -40,13 +47,9 @@ def main():
     env = os.environ.copy()
     env["GRADIO_SHARE"] = "1"  # Create a public URL
     
-    # Find llamafactory-cli in user's local bin
-    home = os.path.expanduser("~")
-    llamafactory_cli = os.path.join(home, ".local", "bin", "llamafactory-cli")
-    
     subprocess.run([
-        llamafactory_cli,
-        "webui",
+        "python3",
+        "-m", "llmtuner.webui",
         "--share"
     ], env=env, check=True)
 
