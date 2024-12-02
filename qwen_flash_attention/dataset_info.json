@@ -1,9 +1,10 @@
 {
     "rust_dataset": {
-        "file_name": "rust_dataset.json",
+        "file_name": "rust_dataset_converted.json",
         "formatting": "alpaca",
-        "prompt": "input",
-        "response": "output",
+        "instruction": "instruction",
+        "input": "input",
+        "output": "output",
         "system": "system",
         "source": "local"
     }
