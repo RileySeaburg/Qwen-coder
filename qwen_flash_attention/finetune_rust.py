@@ -43,17 +43,8 @@ def setup_model_and_tokenizer(
     tokenizer = AutoTokenizer.from_pretrained(
         model_name,
         cache_dir=cache_dir,
-        trust_remote_code=True,
-        padding_side="left"
+        trust_remote_code=True
     )
-    
-    # Set pad token to eos token if not set
-    tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.pad_token_id = tokenizer.eos_token_id
-    
-    # Ensure the tokenizer knows about padding
-    tokenizer.init_kwargs['pad_token'] = tokenizer.eos_token
-    tokenizer.special_tokens_map['pad_token'] = tokenizer.eos_token
 
     # Load model
     model = AutoModelForCausalLM.from_pretrained(
@@ -128,18 +119,12 @@ def prepare_rust_dataset(
     )
     
     def tokenize_function(examples):
-        """Tokenize the text"""
-        # Ensure padding token is set before tokenization
-        if tokenizer.pad_token is None:
-            tokenizer.pad_token = tokenizer.eos_token
-            tokenizer.pad_token_id = tokenizer.eos_token_id
-            
+        """Tokenize the text without padding"""
         return tokenizer(
             examples["text"],
-            padding=True,
             truncation=True,
             max_length=max_length,
-            return_tensors="pt"
+            return_tensors=None  # Return lists instead of tensors
         )
     
     tokenized_dataset = dataset.map(
@@ -150,6 +135,46 @@ def prepare_rust_dataset(
     )
     
     return tokenized_dataset
+
+class DynamicDataCollator:
+    """Custom data collator that handles variable length sequences"""
+    def __init__(self, tokenizer):
+        self.tokenizer = tokenizer
+        
+    def __call__(self, features):
+        batch = {}
+        
+        # Get max length in this batch
+        max_length = max(len(feature["input_ids"]) for feature in features)
+        
+        # Initialize lists for batched data
+        input_ids = []
+        attention_mask = []
+        labels = []
+        
+        for feature in features:
+            # Get sequence length
+            seq_length = len(feature["input_ids"])
+            
+            # Create attention mask
+            mask = [1] * seq_length
+            
+            # Add padding if needed
+            padding_length = max_length - seq_length
+            if padding_length > 0:
+                feature["input_ids"].extend([self.tokenizer.eos_token_id] * padding_length)
+                mask.extend([0] * padding_length)
+            
+            input_ids.append(feature["input_ids"])
+            attention_mask.append(mask)
+            labels.append(feature["input_ids"].copy())  # Use input as labels for causal LM
+        
+        # Convert to tensors
+        batch["input_ids"] = torch.tensor(input_ids)
+        batch["attention_mask"] = torch.tensor(attention_mask)
+        batch["labels"] = torch.tensor(labels)
+        
+        return batch
 
 def train(
     model_name: str = "Qwen/Qwen-7B",
@@ -199,24 +224,17 @@ def train(
         max_steps=max_steps,
         optim="adamw_torch_fused",
         dataloader_num_workers=4,
-        group_by_length=True,  # Now works since we're not using streaming
+        group_by_length=True,  # Group similar length sequences together
         ignore_data_skip=True,
         ddp_find_unused_parameters=False
     )
     
-    # Setup data collator
-    data_collator = DataCollatorForLanguageModeling(
-        tokenizer=tokenizer,
-        mlm=False,
-        pad_to_multiple_of=8
-    )
-    
-    # Initialize trainer
+    # Initialize trainer with custom data collator
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=dataset,
-        data_collator=data_collator,
+        data_collator=DynamicDataCollator(tokenizer),
         tokenizer=tokenizer
     )
     
