@@ -8,6 +8,11 @@
         "user_tag": "input",
         "assistant_tag": "output",
         "system_tag": "system",
-        "source": "local"
+        "source": "local",
+        "fields_map": {
+            "input": "content",
+            "output": "content",
+            "system": "content"
+        }
     }
 }
