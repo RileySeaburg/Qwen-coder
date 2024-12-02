@@ -3,10 +3,13 @@ import json
 import asyncio
 import torch
 from typing import Optional, Dict, List, Any, Union
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoProcessor
 from transformers import BitsAndBytesConfig
 from .browser_session import BrowserSession
 from tenacity import retry, stop_after_attempt, wait_exponential
+from PIL import Image
+import requests
+from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +18,7 @@ class ValidationError(Exception):
     pass
 
 class ToolModel:
-    def __init__(self, model_path: str = "meta-llama/Llama-3.2-3B", 
+    def __init__(self, model_path: str = "meta-llama/Llama-3.2-11B-Vision-Instruct", 
                  cache_dir: str = "/mnt/models/huggingface",
                  max_gpu_memory: str = "20GB",
                  max_cpu_memory: str = "48GB",
@@ -48,7 +51,7 @@ class ToolModel:
                 "cpu": max_cpu_memory
             }
 
-            logger.info("Loading LLaMA tokenizer...")
+            logger.info("Loading LLaMA tokenizer and processor...")
             self.tokenizer = AutoTokenizer.from_pretrained(
                 model_path,
                 trust_remote_code=True,
@@ -56,6 +59,12 @@ class ToolModel:
                 padding_side="left",
                 model_max_length=2048
             )
+            self.processor = AutoProcessor.from_pretrained(
+                model_path,
+                trust_remote_code=True,
+                cache_dir=cache_dir
+            )
+            
             # Set pad token to eos token if not set
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -236,9 +245,20 @@ class ToolModel:
             logger.error(f"Error processing function calls: {str(e)}")
             return f"Error processing function calls: {str(e)}"
 
+    def _process_image(self, image_url: str) -> Optional[Image.Image]:
+        """Process image from URL"""
+        try:
+            response = requests.get(image_url)
+            response.raise_for_status()
+            return Image.open(BytesIO(response.content))
+        except Exception as e:
+            logger.error(f"Error processing image: {str(e)}")
+            return None
+
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     def generate(self, prompt: str, max_length: int = 2048, 
-                temperature: float = 0.7, timeout: Optional[int] = None) -> str:
+                temperature: float = 0.7, timeout: Optional[int] = None,
+                image_url: Optional[str] = None) -> str:
         """
         Generate response with enhanced function calling capabilities and retries
         
@@ -247,6 +267,7 @@ class ToolModel:
             max_length: Maximum length of generated response
             temperature: Sampling temperature
             timeout: Optional timeout override
+            image_url: Optional URL of image to process
         
         Returns:
             Generated response
@@ -263,7 +284,8 @@ class ToolModel:
 
             # Enhanced prompt template
             full_prompt = (
-                "You are an expert in composing functions. You are given a question and a set of possible functions. "
+                "You are an expert in composing functions and analyzing images. "
+                "You are given a question and a set of possible functions. "
                 "Based on the question, you will need to make one or more function/tool calls to achieve the purpose.\n\n"
                 "If none of the functions can be used, point it out. "
                 "If the given question lacks the parameters required by the function, also point it out.\n\n"
@@ -274,15 +296,34 @@ class ToolModel:
                 "Task: " + prompt
             )
 
-            # Tokenize with validation
-            if not hasattr(self, 'tokenizer') or not hasattr(self, 'model'):
-                raise RuntimeError("Model or tokenizer not initialized")
-                
-            inputs = self.tokenizer(full_prompt, return_tensors="pt", padding=True)
+            # Process image if provided
+            image = None
+            if image_url:
+                image = self._process_image(image_url)
+                if image is None:
+                    raise ValidationError("Failed to process image")
+
+            # Prepare inputs
+            if image:
+                # Process both text and image
+                inputs = self.processor(
+                    text=full_prompt,
+                    images=image,
+                    return_tensors="pt",
+                    padding=True
+                )
+            else:
+                # Process text only
+                inputs = self.tokenizer(
+                    full_prompt,
+                    return_tensors="pt",
+                    padding=True
+                )
+
             if not isinstance(inputs, dict) or "input_ids" not in inputs:
                 raise ValidationError("Tokenization failed")
                 
-            inputs = inputs.to(self.model.device)
+            inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
 
             # Generate with optimized parameters and timeout
             start_time = asyncio.get_event_loop().time()
