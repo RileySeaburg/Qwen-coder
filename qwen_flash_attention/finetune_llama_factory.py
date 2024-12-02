@@ -36,30 +36,11 @@ def main():
     # Prepare dataset
     dataset_path = prepare_dataset()
     
-    # Run LLaMA Factory CLI
+    # Launch LLaMA Factory WebUI
     subprocess.run([
         "python3",
-        "LLaMA-Factory/src/entry_point.py",
-        "train",
-        "--model_name_or_path", "Qwen/Qwen-7B",
-        "--dataset", dataset_path,
-        "--dataset_format", "sharegpt",
-        "--output_dir", "output",
-        "--overwrite_cache",
-        "--per_device_train_batch_size", "1",
-        "--gradient_accumulation_steps", "32",
-        "--learning_rate", "1e-4",
-        "--num_train_epochs", "3",
-        "--bf16",
-        "--quantization_bit", "4",
-        "--lora_target", "c_attn,c_proj,w1,w2",
-        "--lora_rank", "8",
-        "--lora_alpha", "16",
-        "--lora_dropout", "0.05",
-        "--flash_attn",
-        "--shift_attn",
-        "--rope_scaling", "dynamic",
-        "--rope_factor", "2.0"
+        "LLaMA-Factory/src/llmtuner/webui/app.py",
+        "--share"  # Create a public URL
     ], check=True)
 
 if __name__ == "__main__":
