@@ -52,8 +52,15 @@ class ToolModel:
             self.tokenizer = AutoTokenizer.from_pretrained(
                 model_path,
                 trust_remote_code=True,
-                cache_dir=cache_dir
+                cache_dir=cache_dir,
+                padding_side="left",
+                add_bos_token=True,
+                add_eos_token=True
             )
+            # Set pad token to eos token if not set
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+                self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
             logger.info("Loading LLaMA model...")
             self.model = AutoModelForCausalLM.from_pretrained(
@@ -272,7 +279,7 @@ class ToolModel:
             if not hasattr(self, 'tokenizer') or not hasattr(self, 'model'):
                 raise RuntimeError("Model or tokenizer not initialized")
                 
-            inputs = self.tokenizer(full_prompt, return_tensors="pt")
+            inputs = self.tokenizer(full_prompt, return_tensors="pt", padding=True)
             if not isinstance(inputs, dict) or "input_ids" not in inputs:
                 raise ValidationError("Tokenization failed")
                 
@@ -291,7 +298,7 @@ class ToolModel:
                         top_p=0.95,
                         top_k=50,
                         repetition_penalty=1.1,
-                        pad_token_id=self.tokenizer.eos_token_id
+                        pad_token_id=self.tokenizer.pad_token_id
                     )
                     
                     if not isinstance(outputs, torch.Tensor):
