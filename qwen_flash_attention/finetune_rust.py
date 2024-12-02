@@ -47,10 +47,10 @@ def setup_model_and_tokenizer(
         padding_side="left"
     )
     
-    # Add pad token as suggested in the error message
-    special_tokens = {'pad_token': '[PAD]'}
-    num_added_tokens = tokenizer.add_special_tokens(special_tokens)
-    logger.info(f"Added {num_added_tokens} special tokens: {special_tokens}")
+    # Use eos_token as pad_token
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token_id = tokenizer.eos_token_id
+    logger.info(f"Using {tokenizer.eos_token} as padding token")
 
     # Load model
     model = AutoModelForCausalLM.from_pretrained(
@@ -61,9 +61,6 @@ def setup_model_and_tokenizer(
         trust_remote_code=True,
         torch_dtype=torch.float16
     )
-    
-    # Resize embeddings to account for new special tokens
-    model.resize_token_embeddings(len(tokenizer))
     
     # Enable gradient checkpointing
     model.gradient_checkpointing_enable()
