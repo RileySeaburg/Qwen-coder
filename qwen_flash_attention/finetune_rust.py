@@ -19,19 +19,6 @@ from peft import (
 )
 import logging
 from typing import Dict, Sequence, Union, Tuple
-import flash_attn
-from torch.distributed.fsdp import (
-    FullyShardedDataParallel as FSDP,
-    MixedPrecision,
-    BackwardPrefetch,
-    ShardingStrategy,
-    CPUOffload
-)
-from torch.distributed.fsdp.wrap import (
-    transformer_auto_wrap_policy,
-    enable_wrap,
-    wrap
-)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -75,7 +62,6 @@ def setup_model_and_tokenizer(
         trust_remote_code=True,
         torch_dtype=torch.float16,
         low_cpu_mem_usage=True,
-        use_flash_attention_2=True,  # Enable Flash Attention 2
         max_memory={0: "45GB", "cpu": "48GB"},  # Reserve some GPU memory
         offload_folder="/mnt/models/offload"
     )
@@ -246,11 +232,6 @@ def train(
 
 if __name__ == "__main__":
     # Set environment variables for optimized training
-    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = (
-        "max_split_size_mb:128,"
-        "garbage_collection_threshold:0.8,"
-        "roundup_power2:True"
-    )
     os.environ["CUDA_LAUNCH_BLOCKING"] = "0"
     os.environ["TORCH_DISTRIBUTED_DEBUG"] = "DETAIL"
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
