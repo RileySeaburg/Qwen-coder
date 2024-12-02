@@ -51,12 +51,12 @@ def setup_model_and_tokenizer(
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    # Load model - Qwen has built-in flash attention
+    # Load model with explicit device placement
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         cache_dir=cache_dir,
         quantization_config=bnb_config,
-        device_map="auto",
+        device_map={"": torch.cuda.current_device()},
         trust_remote_code=True,
         torch_dtype=torch.float16,
         bf16=True  # Enable bf16 for better training stability
