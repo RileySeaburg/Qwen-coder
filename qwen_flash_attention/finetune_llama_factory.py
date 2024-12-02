@@ -38,9 +38,8 @@ def main():
     
     # Run LLaMA Factory CLI
     subprocess.run([
-        "python3", 
-        "-m", "llmtuner.cli",
-        "sft",
+        "llamafactory-cli",
+        "train",
         "--model_name_or_path", "Qwen/Qwen-7B",
         "--dataset", dataset_path,
         "--dataset_format", "sharegpt",
