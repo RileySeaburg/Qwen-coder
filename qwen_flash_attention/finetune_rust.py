@@ -47,20 +47,32 @@ def setup_model_and_tokenizer(
         padding_side="left"
     )
     
+    # Set pad token to eos token if not set
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.pad_token_id = tokenizer.eos_token_id
+    
+    # Add special tokens if needed
+    special_tokens = {
+        'bos_token': '<|im_start|>',
+        'eos_token': '<|im_end|>',
+        'pad_token': '<|pad|>',
+        'unk_token': '<|unknown|>'
+    }
+    tokenizer.add_special_tokens(special_tokens)
 
-    # Load model with explicit device placement
+    # Load model
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         cache_dir=cache_dir,
         quantization_config=bnb_config,
-        device_map={"": torch.cuda.current_device()},
+        device_map="auto",
         trust_remote_code=True,
-        torch_dtype=torch.float16,
-        bf16=True  # Enable bf16 for better training stability
+        torch_dtype=torch.float16
     )
+    
+    # Resize token embeddings to account for new special tokens
+    model.resize_token_embeddings(len(tokenizer))
     
     # Enable gradient checkpointing
     model.gradient_checkpointing_enable()
