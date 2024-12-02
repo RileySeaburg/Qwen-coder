@@ -54,8 +54,9 @@ class ToolModel:
                 trust_remote_code=True,
                 cache_dir=cache_dir,
                 padding_side="left",
-                add_bos_token=True,
-                add_eos_token=True
+                bos_token="<|begin_of_text|>",
+                eos_token="<|end_of_text|>",
+                model_max_length=2048
             )
             # Set pad token to eos token if not set
             if self.tokenizer.pad_token is None:
@@ -262,8 +263,9 @@ class ToolModel:
             if not isinstance(temperature, (int, float)) or temperature <= 0:
                 raise ValidationError("Invalid temperature")
 
-            # Enhanced prompt template
+            # Enhanced prompt template with special tokens
             full_prompt = (
+                self.tokenizer.bos_token +
                 "You are an expert in composing functions. You are given a question and a set of possible functions. "
                 "Based on the question, you will need to make one or more function/tool calls to achieve the purpose.\n\n"
                 "If none of the functions can be used, point it out. "
@@ -272,7 +274,7 @@ class ToolModel:
                 "If you decide to invoke any of the function(s), you MUST put it in the format of "
                 "[func_name1(params_name1=params_value1, params_name2=params_value2...), func_name2(params)]\n"
                 "You SHOULD NOT include any other text in the response.\n\n"
-                "Task: " + prompt
+                "Task: " + prompt + self.tokenizer.eos_token
             )
 
             # Tokenize with validation
@@ -298,7 +300,9 @@ class ToolModel:
                         top_p=0.95,
                         top_k=50,
                         repetition_penalty=1.1,
-                        pad_token_id=self.tokenizer.pad_token_id
+                        pad_token_id=self.tokenizer.pad_token_id,
+                        bos_token_id=self.tokenizer.bos_token_id,
+                        eos_token_id=self.tokenizer.eos_token_id
                     )
                     
                     if not isinstance(outputs, torch.Tensor):
