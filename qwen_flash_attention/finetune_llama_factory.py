@@ -40,9 +40,13 @@ def main():
     env = os.environ.copy()
     env["GRADIO_SHARE"] = "1"  # Create a public URL
     
+    # Find llamafactory-cli in user's local bin
+    home = os.path.expanduser("~")
+    llamafactory_cli = os.path.join(home, ".local", "bin", "llamafactory-cli")
+    
     subprocess.run([
-        "python3",
-        "LLaMA-Factory/src/train_web.py",
+        llamafactory_cli,
+        "webui",
         "--share"
     ], env=env, check=True)
 
