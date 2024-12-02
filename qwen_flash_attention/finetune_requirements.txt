@@ -6,6 +6,11 @@ accelerate>=0.23.0
 bitsandbytes>=0.41.1
 peft>=0.5.0
 trl>=0.7.2
+flash-attn>=2.3.3
+
+# Memory optimizations
+deepspeed>=0.10.0
+fairscale>=0.4.13
 
 # Data processing
 pandas>=2.0.0
