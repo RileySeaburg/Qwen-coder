@@ -1,6 +1,7 @@
 model_name_or_path: Qwen/Qwen2.5-Coder-32B-Instruct
 dataset_path: data/rust_dataset.json
 dataset_format: sharegpt
+output_dir: output/rust_finetune
 quantization_bit: 4
 rope_scaling: dynamic
 flash_attn: true
