@@ -51,15 +51,6 @@ def setup_model_and_tokenizer(
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.pad_token_id = tokenizer.eos_token_id
-    
-    # Add special tokens if needed
-    special_tokens = {
-        'bos_token': '<|im_start|>',
-        'eos_token': '<|im_end|>',
-        'pad_token': '<|pad|>',
-        'unk_token': '<|unknown|>'
-    }
-    tokenizer.add_special_tokens(special_tokens)
 
     # Load model
     model = AutoModelForCausalLM.from_pretrained(
@@ -70,9 +61,6 @@ def setup_model_and_tokenizer(
         trust_remote_code=True,
         torch_dtype=torch.float16
     )
-    
-    # Resize token embeddings to account for new special tokens
-    model.resize_token_embeddings(len(tokenizer))
     
     # Enable gradient checkpointing
     model.gradient_checkpointing_enable()
@@ -120,10 +108,9 @@ def prepare_rust_dataset(
     def format_rust_code(examples):
         """Format Rust code with Qwen chat template"""
         instructions = [
-            "<|im_start|>system\nYou are an expert Rust programmer. Study the following code carefully to learn Rust programming patterns and best practices.<|im_end|>\n"
-            "<|im_start|>user\nHere is a Rust code snippet:\n```rust\n{}\n```<|im_end|>\n"
-            "<|im_start|>assistant\nI will analyze this code and learn from its patterns and practices.<|im_end|>\n"
-            .format(content[:max_length])  # Truncate long examples
+            f"{tokenizer.bos_token}system\nYou are an expert Rust programmer. Study the following code carefully to learn Rust programming patterns and best practices.{tokenizer.eos_token}\n"
+            f"{tokenizer.bos_token}user\nHere is a Rust code snippet:\n```rust\n{content[:max_length]}\n```{tokenizer.eos_token}\n"
+            f"{tokenizer.bos_token}assistant\nI will analyze this code and learn from its patterns and practices.{tokenizer.eos_token}\n"
             for content in examples["content"]
         ]
         
