@@ -37,11 +37,14 @@ def main():
     dataset_path = prepare_dataset()
     
     # Launch LLaMA Factory WebUI
+    env = os.environ.copy()
+    env["GRADIO_SHARE"] = "1"  # Create a public URL
+    
     subprocess.run([
         "python3",
-        "LLaMA-Factory/src/llmtuner/webui/app.py",
-        "--share"  # Create a public URL
-    ], check=True)
+        "-m", "llmtuner.webui",
+        "--share"
+    ], env=env, check=True)
 
 if __name__ == "__main__":
     main()
