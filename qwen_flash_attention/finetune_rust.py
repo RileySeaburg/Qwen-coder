@@ -70,6 +70,7 @@ def setup_model_and_tokenizer(
 def setup_lora(model: AutoModelForCausalLM) -> AutoModelForCausalLM:
     """Configure LoRA with memory-efficient settings"""
     
+    # Updated target modules for Qwen architecture
     lora_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
         r=8,  # Reduced rank for memory efficiency
@@ -77,15 +78,12 @@ def setup_lora(model: AutoModelForCausalLM) -> AutoModelForCausalLM:
         lora_dropout=0.05,
         bias="none",
         target_modules=[
-            "q_proj",
-            "k_proj",
-            "v_proj",
-            "o_proj",
-            "gate_proj",
-            "up_proj",
-            "down_proj"
+            "c_attn",
+            "c_proj",
+            "w1",
+            "w2"
         ],
-        modules_to_save=["embed_tokens", "lm_head"]  # Save important layers
+        modules_to_save=["wte", "ln_f"]  # Save important layers
     )
     
     model = get_peft_model(model, lora_config)
