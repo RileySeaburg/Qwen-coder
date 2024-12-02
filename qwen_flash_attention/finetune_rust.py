@@ -48,9 +48,12 @@ def setup_model_and_tokenizer(
     )
     
     # Set pad token to eos token if not set
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-        tokenizer.pad_token_id = tokenizer.eos_token_id
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token_id = tokenizer.eos_token_id
+    
+    # Ensure the tokenizer knows about padding
+    tokenizer.init_kwargs['pad_token'] = tokenizer.eos_token
+    tokenizer.special_tokens_map['pad_token'] = tokenizer.eos_token
 
     # Load model
     model = AutoModelForCausalLM.from_pretrained(
@@ -126,6 +129,11 @@ def prepare_rust_dataset(
     
     def tokenize_function(examples):
         """Tokenize the text"""
+        # Ensure padding token is set before tokenization
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+            tokenizer.pad_token_id = tokenizer.eos_token_id
+            
         return tokenizer(
             examples["text"],
             padding=True,
