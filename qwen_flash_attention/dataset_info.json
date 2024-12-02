@@ -1,14 +1,10 @@
 {
     "rust_dataset": {
         "file_name": "rust_dataset.json",
-        "formatting": "sharegpt",
-        "messages": "conversation",
-        "role_tag": "role",
-        "content_tag": "content",
-        "user_tag": "input",
-        "assistant_tag": "output",
-        "system_tag": "system",
-        "source": "local",
-        "formatting_func": "convert_sharegpt"
+        "formatting": "alpaca",
+        "prompt": "input",
+        "response": "output",
+        "system": "system",
+        "source": "local"
     }
 }
