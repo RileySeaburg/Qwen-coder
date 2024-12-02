@@ -42,7 +42,7 @@ def main():
     
     subprocess.run([
         "python3",
-        "-m", "llmtuner.webui",
+        "LLaMA-Factory/src/train_web.py",
         "--share"
     ], env=env, check=True)
 
